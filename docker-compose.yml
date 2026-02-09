@@ -1,0 +1,15 @@
+services:
+  scraper:
+    build: .
+    container_name: scripts-alia
+    user: "${UID_GID}"
+    volumes:
+      # Persistent data and logs
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    # Interactive shell by default (run with: docker-compose run --rm scraper)
+    # To run a single command: docker-compose run --rm scraper <command>
+    stdin_open: true
+    tty: true

@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Data and logs (mounted as volumes)
+data/
+logs/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+!README.md
+CLAUDE.local.md
+
+# Development tools
+.pre-commit-config.yaml
+requirements-dev.txt
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore
