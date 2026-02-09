@@ -1,0 +1,455 @@
+#!/usr/bin/env python3
+"""
+CLI interface for Scripts ALIA - Galician Audio and Text Download Tools
+"""
+
+import logging
+import shutil
+import sys
+import threading
+import time
+from pathlib import Path
+
+import click
+from yaspin.spinners import Spinners
+
+from src.config import setup_root_logging
+from src.sources import SOURCES
+
+# Global lock to prevent race condition between spinner and logging
+_spinner_lock = threading.Lock()
+_spinner_running = {"active": False}
+
+
+class SpinnerStreamHandler(logging.StreamHandler):
+    """
+    Custom logging handler that clears the spinner line before logging
+    """
+
+    def emit(self, record):
+        with _spinner_lock:
+            if _spinner_running.get("active"):
+                sys.stderr.write("\033[999B\r" + " " * 100 + "\r")
+                sys.stderr.flush()
+
+            super().emit(record)
+
+
+def spinner(text, spinner_name="dots"):
+    """
+    Shows a message with an animated spinner
+    """
+    stop_flag = {"running": True}
+    _spinner_running["active"] = True
+    frames = getattr(Spinners, spinner_name)[1]  # List of frames
+    interval = 0.08
+
+    def updater():
+        sys.stderr.write("\033[?25l")  # Hide the terminal cursor
+        sys.stderr.flush()
+        i = 0
+        while stop_flag["running"]:
+            frame = frames[i % len(frames)]
+            message = f"{frame} {text}"
+
+            with _spinner_lock:
+                sys.stderr.write("\0337")  # Save current cursor position
+                sys.stderr.write(
+                    "\033[999B"
+                )  # Move cursor to the bottom of the terminal
+                terminal_width = shutil.get_terminal_size(
+                    (80, 20)
+                ).columns  # Default value 80 if it cannot be obtained
+                sys.stderr.write("\r" + " " * terminal_width + "\r" + message)
+                sys.stderr.write("\0338")  # Restore original cursor position
+                sys.stderr.flush()
+
+            i += 1
+            time.sleep(interval)
+
+        # Clear the last line and show the cursor again when stopped
+        with _spinner_lock:
+            sys.stderr.write("\033[999B\r" + " " * terminal_width + "\r")
+            sys.stderr.write("\033[?25h")
+            sys.stderr.flush()
+
+    threading.Thread(target=updater, daemon=True).start()
+    return stop_flag
+
+
+def stop_spinner(flag):
+    """Stops the spinner."""
+    flag["running"] = False
+    _spinner_running["active"] = False
+    with _spinner_lock:
+        sys.stderr.write("\033[999B\r" + " " * 100 + "\r")
+        sys.stderr.write("\033[?25h")
+        sys.stderr.flush()
+
+
+@click.group()
+@click.option(
+    "--log-level",
+    default="INFO",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
+    help="Nivel de log",
+)
+@click.pass_context
+def cli(ctx, log_level):
+    """
+    Scripts ALIA - Ferramenta de descarga de audio e texto en galego
+
+    Fontes dispoñibles:
+
+    - parlamento: Parlamento de Galicia
+    """
+    ctx.ensure_object(dict)
+    setup_root_logging(log_level, SpinnerStreamHandler())
+    ctx.obj["logger"] = logging.getLogger("cli")
+
+
+@cli.command()
+@click.option(
+    "--source",
+    "-s",
+    type=click.Choice(["all"] + list(SOURCES.keys())),
+    default="all",
+    help="Fonte de datos",
+)
+@click.option(
+    "--date-from",
+    "-f",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Data de inicio (YYYY-MM-DD)",
+)
+@click.option(
+    "--date-to",
+    "-t",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Data de fin (YYYY-MM-DD)",
+)
+@click.option(
+    "--output-dir", "-o", type=click.Path(path_type=Path), help="Directorio de saída"
+)
+@click.option("--verbose", "-v", is_flag=True, help="Mostrar información completa")
+@click.pass_context
+def fetch(ctx, source, date_from, date_to, output_dir, verbose):
+    """
+    Buscar novo contido dispoñible nas fontes
+
+    Exemplos:
+
+        # Buscar todo o contido novo
+        scraper fetch
+
+        # Buscar contido do Parlamento desde unha data
+        scraper fetch --source parlamento --date-from 2024-01-01
+
+        # Buscar contido de todas as fontes nun rango de datas
+        scraper fetch --date-from 2024-01-01 --date-to 2024-12-31
+    """
+    logger = ctx.obj["logger"]
+
+    # Convert datetime to date
+    date_from = date_from.date() if date_from else None
+    date_to = date_to.date() if date_to else None
+
+    # Get sources to process
+    if source == "all":
+        sources_to_process = SOURCES.keys()
+    else:
+        sources_to_process = [source]
+
+    total_items = 0
+
+    for source_name in sources_to_process:
+        logger.info(f"{'=' * 60}")
+        logger.info(f"Buscando contido de: {source_name}")
+        logger.info(f"{'=' * 60}")
+        # Show the spinner
+        spinner_flag = spinner(f"Buscando contido en {source_name}... ")
+
+        try:
+            # Initialize downloader
+            downloader_class = SOURCES[source_name]
+            if output_dir:
+                downloader = downloader_class(str(output_dir / source_name))
+            else:
+                downloader = downloader_class()
+
+            # Fetch items
+            items = downloader.fetch_items(date_from, date_to)
+
+            if items:
+                logger.info(f"Atopados {len(items)} elementos en {source_name}:")
+
+                items_to_show = items if verbose else items[:10]
+                for i, item in enumerate(items_to_show, 1):
+                    title = item.get("title", item.get("file_prefix", "Sen título"))
+
+                    if verbose:
+                        logger.info(f"{i}. {title}")
+                        for key, value in item.items():
+                            if key != "title":
+                                logger.info(f"   {key}: {value}")
+                    else:
+                        logger.info(f"{i}. {title}")
+
+                if not verbose and len(items) > 10:
+                    logger.info(f"  ... e {len(items) - 10} máis")
+                total_items += len(items)
+            else:
+                logger.info(f"Non se atoparon elementos novos en {source_name}")
+
+        except Exception as e:
+            logger.error(f"Erro ao buscar en {source_name}: {str(e)}")
+        finally:
+            # Stop the spinner
+            stop_spinner(spinner_flag)
+    logger.info(f"{'=' * 60}")
+    logger.info(f"Total: {total_items} elementos atopados")
+
+
+@cli.command()
+@click.option(
+    "--source",
+    "-s",
+    type=click.Choice(["all"] + list(SOURCES.keys())),
+    default="all",
+    help="Fonte de datos",
+)
+@click.option(
+    "--date-from",
+    "-f",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Data de inicio (YYYY-MM-DD)",
+)
+@click.option(
+    "--date-to",
+    "-t",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Data de fin (YYYY-MM-DD)",
+)
+@click.option(
+    "--output-dir", "-o", type=click.Path(path_type=Path), help="Directorio de saída"
+)
+@click.option(
+    "--force", is_flag=True, help="Forzar re-descarga de ficheiros existentes"
+)
+@click.option("--verbose", "-v", is_flag=True, help="Mostrar información completa")
+@click.pass_context
+def download(ctx, source, date_from, date_to, output_dir, force, verbose):
+    """
+    Descargar contido das fontes
+
+    Exemplos:
+
+        # Descargar todo o contido novo
+        scraper download
+
+        # Descargar contido de Parlamento
+        scraper download --source parlamento
+
+        # Descargar contido dun período específico
+        scraper download --date-from 2024-11-01 --date-to 2024-11-30
+
+        # Forzar re-descarga
+        scraper download --source radio-galega --force
+    """
+    logger = ctx.obj["logger"]
+
+    # Convert datetime to date
+    date_from = date_from.date() if date_from else None
+    date_to = date_to.date() if date_to else None
+
+    # Get sources to process
+    if source == "all":
+        sources_to_process = SOURCES.keys()
+    else:
+        sources_to_process = [source]
+
+    total_stats = {"success": 0, "failed": 0, "skipped": 0}
+
+    for source_name in sources_to_process:
+        logger.info(f"{'=' * 60}")
+        logger.info(f"Descargando de: {source_name}")
+        logger.info(f"{'=' * 60}")
+
+        # Show the spinner
+        spinner_flag = spinner(f"Descargando contido en {source_name}... ")
+
+        try:
+            # Initialize downloader
+            downloader_class = SOURCES[source_name]
+            if output_dir:
+                downloader = downloader_class(str(output_dir / source_name))
+            else:
+                downloader = downloader_class()
+
+            # Get items to download
+            items = downloader.fetch_items(date_from, date_to)
+
+            if verbose and items:
+                logger.info(f"Elementos a descargar ({len(items)}):")
+                for i, item in enumerate(items, 1):
+                    title = item.get("title", item.get("file_prefix", "Sen título"))
+                    item_id = downloader.get_item_id(item)
+                    is_downloaded = downloader.is_downloaded(item)
+                    status = "xa descargado" if is_downloaded else "pendente"
+                    logger.info(f"{i}. {title} [{item_id}] - {status}")
+
+            # Download items
+            stats = downloader.download(items, date_from, date_to, force)
+
+            # Update totals
+            for key in total_stats:
+                total_stats[key] += stats.get(key, 0)
+
+            logger.info(f"Estatísticas de {source_name}:")
+            logger.info(f"  Descargados: {stats.get('success', 0)}")
+            logger.info(f"  Fallados: {stats.get('failed', 0)}")
+            logger.info(f"  Omitidos: {stats.get('skipped', 0)}")
+
+        except Exception as e:
+            logger.error(f"Erro ao descargar de {source_name}: {str(e)}")
+
+        finally:
+            # Stop the spinner
+            stop_spinner(spinner_flag)
+
+    logger.info(f"{'=' * 60}")
+    logger.info("Estatísticas totais:")
+    logger.info(f"  Descargados: {total_stats['success']}")
+    logger.info(f"  Fallados: {total_stats['failed']}")
+    logger.info(f"  Omitidos: {total_stats['skipped']}")
+
+
+@cli.command()
+@click.option(
+    "--source",
+    "-s",
+    type=click.Choice(["all"] + list(SOURCES.keys())),
+    default="all",
+    help="Fonte de datos",
+)
+@click.option(
+    "--output-dir", "-o", type=click.Path(path_type=Path), help="Directorio de saída"
+)
+@click.option("--verbose", "-v", is_flag=True, help="Mostrar información completa")
+@click.pass_context
+def status(ctx, source, output_dir, verbose):
+    """
+    Ver estado das descargas
+
+    Exemplos:
+
+        # Ver estado de todas as fontes
+        scraper status
+
+        # Ver estado dunha fonte específica
+        scraper status --source parlamento
+    """
+    logger = ctx.obj["logger"]
+
+    # Get sources to check
+    if source == "all":
+        sources_to_check = SOURCES.keys()
+    else:
+        sources_to_check = [source]
+
+    logger.info(f"{'=' * 60}")
+    logger.info("ESTADO DAS DESCARGAS")
+    logger.info(f"{'=' * 60}")
+
+    total_files = 0
+    total_size = 0
+
+    for source_name in sources_to_check:
+        try:
+            # Initialize downloader
+            downloader_class = SOURCES[source_name]
+            if output_dir:
+                downloader = downloader_class(str(output_dir / source_name))
+            else:
+                downloader = downloader_class()
+
+            # Get status
+            status = downloader.get_status()
+
+            logger.info(f"\n{source_name.upper()}:")
+            logger.info(f"  Directorio: {status['output_dir']}")
+            logger.info(f"  Ficheiros descargados: {status['downloaded_count']}")
+            logger.info(f"  Tamaño total: {status['total_size_mb']} MB")
+
+            if verbose and status["downloaded_count"] > 0:
+                logger.info("\n  Ficheiros:")
+                downloaded_items = downloader.get_downloaded_items()
+                for i, item in enumerate(downloaded_items, 1):
+                    item_path = downloader.output_dir / item
+                    if item_path.is_file():
+                        size_mb = item_path.stat().st_size / (1024 * 1024)
+                        logger.info(f"    {i}. {item} ({size_mb:.2f} MB)")
+                    elif item_path.is_dir():
+                        dir_size = sum(
+                            f.stat().st_size
+                            for f in item_path.rglob("*")
+                            if f.is_file()
+                        )
+                        size_mb = dir_size / (1024 * 1024)
+                        logger.info(f"    {i}. {item}/ ({size_mb:.2f} MB)")
+
+            total_files += status["downloaded_count"]
+            total_size += status["total_size_mb"]
+
+        except Exception as e:
+            logger.error(f"Erro ao obter estado de {source_name}: {str(e)}")
+
+    if source == "all":
+        logger.info(f"{'=' * 60}")
+        logger.info("TOTAIS:")
+        logger.info(f"  Ficheiros: {total_files}")
+        logger.info(f"  Tamaño: {total_size:.2f} MB")
+
+
+@cli.command()
+@click.pass_context
+def help(ctx):
+    """
+    Mostrar axuda sobre os comandos dispoñibles
+    """
+    sources_list = list(SOURCES.keys())
+    example_list = ", ".join(sources_list)
+    example_source = sources_list[0] if sources_list else "non hai fontes"
+
+    help_text = f"""
+Scripts ALIA - Ferramenta de Descarga de Audio Galego
+
+COMANDOS:
+  fetch      Buscar novo contido nas fontes
+  download   Descargar contido das fontes
+  status     Ver estado das descargas
+  help       Mostrar esta axuda
+
+FORMATO:
+  scraper COMANDO [OPCIÓNS]
+
+OPCIÓNS COMÚNS:
+  --source, -s [all, {example_list}]
+  --date-from, -f YYYY-MM-DD
+  --date-to, -t YYYY-MM-DD
+  --output-dir, -o PATH
+  --verbose, -v (mostrar información completa)
+  --force (só para download)
+
+EXEMPLOS:
+  scraper fetch --source {example_source}
+  scraper fetch --verbose
+  scraper download --date-from 2024-01-01
+  scraper download --source {example_source} --verbose
+  scraper status --verbose
+    """
+    click.echo(help_text)
+
+
+if __name__ == "__main__":
+    cli()

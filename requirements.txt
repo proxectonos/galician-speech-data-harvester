@@ -1,0 +1,14 @@
+# Core dependencies
+click>=8.1.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+scrapy>=2.13.3
+scrapydo>=0.2.2
+yaspin>=3.3.0
+
+# Audio/Video processing
+yt-dlp>=2023.12.30
+pydub>=0.25.1
+
+# PDF processing
+pypdf>=6.0.0
