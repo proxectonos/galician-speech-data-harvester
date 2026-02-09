@@ -1,189 +1,189 @@
-# Scripts ALIA
+# ALIA Scripts
 
-Ferramenta para descargar e organizar datos de audio e texto en lingua galega de diversas fontes públicas.
+A tool for downloading and organising audio and text data in Galician from various public sources.
 
-## Obxectivo
+## Objective
 
-Facilitar a recompilación de datos en galego para o desenvolvemento de tecnoloxías da fala e procesamento de linguaxe natural, centrándose en:
-- Descarga automatizada de contido multimedia
-- Extracción e limpeza de transcricións
-- Organización estruturada dos datos
+Facilitating the collection of Galician data for the development of speech technologies and natural language processing, focusing on:
+- Automated download of multimedia content
+- Extraction and cleaning of transcripts
+- Structured organisation of data
 
-## Fontes de Datos
+## Data sources
 
-### 1. Parlamento de Galicia
-- **Mediateca**: https://mediateca.parlamentodegalicia.gal/activity
-- **Buscador**: https://www.es.parlamentodegalicia.es/Buscador/Xeral
-- **Saída**:
-  - Audio de sesións (WAV 16kHz)
-  - Transcricións con aliñamento temporal (de STM)
-  - Diarios de sesións en texto (de PDF)
-- **Tipos de sesión**:
-  - Pleno: `DSPG_[Nº]_[DDMMAAAA].wav`
-  - Comisión: `CPG_[Nº]_[DDMMAAAA].wav`
-  - Comisión non permanente: `CPG_NP_[DDMMAAAA].wav`
-  - Comisión especial non permanente: `CPG_ENP_[DDMMAAAA].wav`
-  - Comisión permanente non lexislativa: `CPG_PNL_[DDMMAAAA].wav`
-  - Outros: `PG_[SIGLAS]_[DDMMAAAA].wav`
+### 1. Galician Parliament
+- **Media library**: https://mediateca.parlamentodegalicia.gal/activity
+- **Search engine**: https://www.es.parlamentodegalicia.es/Buscador/Xeral
+- **Output**:
+  - Session audio (WAV 16kHz)
+  - Temporally aligned transcripts (STM)
+  - Text-based session journals (PDF)
+- **Session types**:
+  - Plenary session: `DSPG_[Nº]_[DDMMAAAA].wav`
+  - Comission: `CPG_[Nº]_[DDMMAAAA].wav`
+  - Non permanent comission: `CPG_NP_[DDMMAAAA].wav`
+  - Special non permanent comission: `CPG_ENP_[DDMMAAAA].wav`
+  - Non permanent legislative comission: `CPG_PNL_[DDMMAAAA].wav`
+  - Other: `PG_[SIGLAS]_[DDMMAAAA].wav`
 
-## Instalación
+## Instalation
 
-### Requisitos
+### Requirements
 - Python 3.13+
 - ffmpeg
 - Git
 
-### Instalación local
+### Local installation
 ```bash
-# Clonar repositorio
+# Clone repo
 git clone <repo-url>
 cd scripts_descarga
 
-# Crear e activar entorno virtual
+# Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate  # En Linux/Mac
-# venv\Scripts\activate    # En Windows
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate    # Windows
 
-# Instalar dependencias
+# Install dependencies
 pip install -r requirements.txt
 
-# Facer o scraper executable
+# Make the scraper executable
 chmod +x scraper
 ```
 
-### Docker (recomendado para consistencia multiplataforma)
+### Docker (Recommended for cross-platform consistency)
 
 ```bash
-# Crear carpetas (para evitar erros de permisos)
+# Create folders (to avoid permission errors)
 mkdir data logs
 
-# Construír imaxe (unha vez, ou cando cambia o código/dependencias)
+# Build image (once, or when code/dependencies change)
 UID_GID="$(id -u):$(id -g)" docker compose build
 
-# Modo interactivo (recomendado para executar múltiples comandos)
+# Interactive mode (recommended for executing multiple commands)
 UID_GID="$(id -u):$(id -g)" docker compose run --rm scraper
-# Dentro do contedor bash:
+# Inside the bash container:
 #   scraper status
 #   scraper fetch --source all
-#   scraper download --source parlamento
+#   scraper download --source parliament
 #   exit
 
-# Execución de comandos individuais
+# Execution of individual commands
 UID_GID="$(id -u):$(id -g)" docker compose run --rm scraper help
 UID_GID="$(id -u):$(id -g)" docker compose run --rm scraper status
 ```
 
-**Notas sobre Docker:**
-- **UID_GID="$(id -u):$(id -g)"**: Permite que Docker se execute co teu usuario normal en vez de usar root.
-- **Modo interactivo**: Permite executar múltiples comandos nunha sesión sen recrear o contedor
-- **Volumes**: Os directorios `data/` e `logs/` móntanse no host, polo que as descargas persisten
-- **Reconstrución**: Só é necesaria cando cambia o código ou as dependencias
-- **Multiplataforma**: Funciona idénticamente en Windows, macOS e Linux
+**Notes on Docker:**
+- **UID_GID="$(id -u):$(id -g)"**: Allows Docker to run as your normal user instead of using root.
+- **Interactive mode**: Allows multiple commands to be run in a session without recreating the container.
+- **Volumes**: The `data/` and `logs/` directories are mounted on the host, so downloads persist.
+- **Reconstruction**: Only needed when the code or dependencies change.
+- **Cross-platform**: Works identically on Windows, macOS, and Linux.
 
-## Uso
+## Usage
 
-### Comandos principais
+### Main commands
 
 ```bash
-# Ver axuda
+# See help
 ./scraper help
 
-# Buscar contido novo
+# Search for new content
 ./scraper fetch --source all
 
-# Descargar contido
+# Download content
 ./scraper download --source parlamento
 
-# Ver estado das descargas
+# View download status
 ./scraper status
 ```
 
-### Opcións de filtrado
+### Filtering options
 
 ```bash
-# Por datas
+# By date
 ./scraper download --date-from 2024-01-01 --date-to 2024-12-31
 
-# Por fonte específica
+# By specific source
 ./scraper download --source parlamento
 
-# Forzar re-descarga
+# Force redownload
 ./scraper download --force
 
-# Directorio de saída personalizado
+# Personalized output directory
 ./scraper download --output-dir /ruta/personalizada
 ```
 
-### Opcións de configuración
-Podes consultar todas as opcións aquí:
+### Configuration options
+You can check all the options here:
 ```
 ./docs/configurations.md
 ```
-Podes ver como eliminar unha fonte dispoñible aqui:
+You can see how to remove a source here:
 ```
 ./docs/avalaible-sources.md
 ```
 
 
 
-## Estrutura do Proxecto
+## Project structure
 
 ```
 scripts_descarga/
 ├── src/
-│   ├── BaseDownloader.py          # Clase base para downloaders
-│   ├── config.py                  # Configuración global
-│   ├── sources.py                 # Fontes dispoñibles
+│   ├── BaseDownloader.py          # Base class for downloaders
+│   ├── config.py                  # Global configuration
+│   ├── sources.py                 # Avaliable sources
 │   ├── downloaders/
-│   │   ├── parlamento.py          # Parlamento de Galicia
+│   │   ├── parlamento.py          # Galician Parliament
 │   └── utils/
-│       ├── audio.py               # Procesamento de audio
-│       └── pdf.py                 # Procesamento de PDFs
-├── data/downloads/                # Datos descargados
-├── logs/                          # Logs de execución
-├── docs/                          # Documentación
-├── scraper                        # Interface de comandos (executable)
+│       ├── audio.py               # Audio processing
+│       └── pdf.py                 # PDF processing
+├── data/downloads/                # Downloaded data
+├── logs/                          # Execution logs
+├── docs/                          # Documentation
+├── scraper                        # Command interface (executable)
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
 └── README.md
 ```
 
-## Formato de Saída
+## Output format
 
 - **Audio**: WAV, 16-bit, 16 kHz, mono
-- **Texto**: TXT con transcricións e documentos
+- **Text**: TXT with transcripts and documents
 
-## Desenvolvemento
+## Development
 
-### Ferramentas de desenvolvemento
+### Development tools
 
 ```bash
-# Asegurarse de ter o entorno virtual activado
-source venv/bin/activate  # En Linux/Mac
-# venv\Scripts\activate    # En Windows
+# Make sure you have the virtual environment activated
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate    # Windows
 
-# Instalar dependencias de desenvolvemento
+# Install development dependencies
 pip install -r requirements-dev.txt
 
-# Configurar pre-commit hooks
+# Configure pre-commit hooks
 pre-commit install
 
-# Executar formateo manual
+# Execute manual formatting
 ruff format .
 
-# Executar linter manual
+# Run manual linter
 ruff check . --fix
 
-# Executar todos os hooks manualmente
+# Run all hooks manually
 pre-commit run --all-files
 ```
 
-**Importante**: Sempre activar o entorno virtual (`source venv/bin/activate`) antes de traballar no proxecto. Os pre-commit hooks executaranse automaticamente en cada commit para garantir a calidade do código.
+**Important**: Always activate the virtual environment (`source venv/bin/activate`) before working on the project. The pre-commit hooks will run automatically on each commit to ensure code quality.
 
-### Engadir nova fonte
+### Adding new source
 
-1. Crear novo downloader en `src/downloaders/`
-2. Herdar de `BaseDownloader`
-3. Implementar métodos
-4. Rexistrar en `scraper`
+1. Create a new downloader in `src/downloaders/`
+2. Inherit from `BaseDownloader`
+3. Implement methods
+4. Register in `scraper`

@@ -1,17 +1,18 @@
-# Eliminación de Fontes en `sources.py`
+# Source removal in `sources.py`
 
-Neste proxecto, todas as fontes dispoñibles están definidas no arquivo `sources.py`. Este arquivo contén a lista de fontes que o sistema pode usar para distintos propósitos.
 
-## Localización do arquivo
+In this project, all available sources are defined in the `sources.py` file. This file contains the list of sources that the system can use for various purposes.
 
-O arquivo atópase en:
+## File localization
+
+The file is located at:
 ```
 .src/sources.py
 ```
 
-## Estrutura básica
+## Basic structure
 
-Dentro de `sources.py`, as fontes están organizadas como unha lista, por exemplo:
+Inside `sources.py`, the sources are organized as a list, for example:
 
 ```python
 SOURCES = [
@@ -20,30 +21,29 @@ SOURCES = [
 ]
 ```
 
-## Como eliminar unha fonte
+## How to remove a source
 
-Para eliminar unha fonte dispoñible, segue estes pasos:
+To remove an available source, follow these steps:
 
-1. Abre `sources.py` co teu editor de código favorito.
-2. Localiza a lista de fontes dispoñibles (`SOURCES` no exemplo anterior).
-3. Elimina a entrada correspondente á fonte que desexas eliminar.
+1. Open `sources.py` with your favorite code editor.
+2. Locate the list of available sources (`SOURCES` in the example above).
+3. Remove the entry corresponding to the source you want to delete.
 
-Por exemplo, se queres eliminar `"parlamento"`:
+For example, if you want to remove `"parlamento"`:
 
 ```python
 SOURCES = [
     # ...
 ]
 ```
-4. Elimina o archivo de implementación do downloader correspondente (Neste caso `"parlamento"`):
+4. Delete the implementation file for the corresponding downloader (in this case, `"parlamento"`):
     ```
     .src/downloaders/parlamento.py
     ```
 
+5. Save changes.
 
-5. Garda os cambios.
+## Considerations
 
-## Consideracións
-
-- Despois de modificar `sources.py`, é recomendable reiniciar a aplicación para que os cambios teñan efecto.
-- No arquivo `config.py` hai configuracións específicas de cada fonte. Aínda que elimines unha fonte de `sources.py`, estas configuracións seguirán presentes aínda que non causarán problemas, é importante saber que existen alí.
+- After modifying `sources.py`, it is recommended to restart the application for the changes to take effect.
+- The `config.py` file contains source-specific settings. Even if you remove a source from `sources.py`, these settings will still be present, though they won't cause any issues. It's important to be aware that they are there.

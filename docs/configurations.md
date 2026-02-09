@@ -1,93 +1,90 @@
-# Configuracións para o scraping
+# Scraping configuration
 
-O módulo config.py define a **configuración xeral e específica** para as ferramentas de scraping do proxecto.
-O seu propósito é centralizar todos os parámetros de funcionamento: desde opcións de descarga e audio, ata límites por fonte e axustes de logging.
-
-
-## Estrutura xeral do ficheiro
-
-O ficheiro contén:
-
-1. **Configuracións básicas e globais** (axustes de usuario).
-2. **Configuracións específicas por fonte**.
-3. **Funcións auxiliares** para inicializar o sistema de logging e cabeceiras HTTP.
+The config.py module defines the **general and specific configuration** for the project's scraping tools. Its purpose is to centralize all operating parameters: from download and audio options to per-source limits and logging settings.
 
 
+## General file structure
 
-## Parte configurable polo usuario
+The file contains:
 
-O usuario pode modificar con seguridade os seguintes parámetros:
+1. **Basic and global settings** (user settings).
+2. **Source-specific settings**.
+3. **Helper functions** to initialize the logging system and HTTP headers.
 
-### Parámetros globais axustables
+## User-configurable part
 
-| Variable | Descrición | Valor por defecto |
+The user can safely modify the following parameters:
+
+### Adjustable Global Parameters
+
+| Variable | Description | Default Value |
 |-----------|-------------|-------------------|
-| `WORKERS` | Número de descargas simultáneas. | `5` |
-| `AUDIO_SAMPLE_RATE` | Frecuencia de mostrexo do audio (Hz). | `16000` |
-| `AUDIO_CHANNELS` | Número de canles (1 = mono, 2 = estéreo). | `1` |
-| `AUDIO_FORMAT` | Formato de saída do audio. | `"wav"` |
-| `DEFAULT_TIMEOUT` | Tempo máximo de espera en segundos. | `30` |
-| `MAX_RETRIES` | Número máximo de reintentos se falla unha descarga. | `3` |
-| `CHUNK_SIZE` | Tamaño dos fragmentos de descarga en bytes. | `8192` |
-| `DOWNLOADS_DIR` | Ruta onde se gardan os ficheiros descargados. | `./data/downloads` |
-| `LOGS_DIR` | Ruta onde se gardan os ficheiros de log. | `./logs` |
+| `WORKERS` | Number of simultaneous downloads.| `5` |
+| `AUDIO_SAMPLE_RATE` | Audio sampling frequency (Hz). | `16000` |
+| `AUDIO_CHANNELS` | Number of channels (1 = mono, 2 = stereo). | `1` |
+| `AUDIO_FORMAT` | Audio output format. | `"wav"` |
+| `DEFAULT_TIMEOUT` | Maximum waiting time in seconds. | `30` |
+| `MAX_RETRIES` | Maximum number of retries if a download fails. | `3` |
+| `CHUNK_SIZE` | Download fragment size in bytes. | `8192` |
+| `DOWNLOADS_DIR` | Path where downloaded files are saved. | `./data/downloads` |
+| `LOGS_DIR` | Path where log files are saved. | `./logs` |
 
 
 ---
 
-### Configuración específica por fonte
+### Specific source configuration
 
-Cada fonte ten o seu propio bloque de configuración, donde o **usuario pode modificar a data límite (`limit_date`)** ata a cal se desexa realizar o scraping.
+Each source has its own configuration block, where the **user can modify the limit date (`limit_date`)** up to which the scraping is desired.
 
-Exemplos de configuración editable por fonte:
+Editable configuration per source example:
 
-- **Parlamento de Galicia**
+- **Galician Parliament**
   ```python
   "limit_date": datetime.strptime("2022-05-25", "%Y-%m-%d").date()
   ```
 
 
-## Parte non modificable polo usuario
+## User-unmodifiable part
 
-O resto do ficheiro contén configuracións **internas e críticas** que deben ser cambiadas con coidado xa que afectan a funcionalidade do programa (encárganse de que o scraper funcione de maneira estable e eficiente):
+The rest of the file contains **internal and critical** settings that should be changed with care as they affect the program's functionality (they ensure the scraper runs stably and efficiently):
 
-1. **Inicialización de Scrapy e Twisted**
+1. **Scrapy and Twisted initialization**
    ```python
    asyncioreactor.install()
    configure_logging(install_root_handler=False)
    ```
-   - Configura o reactor de Twisted para o manexo asincrónico.
-   - Axusta o logging de Scrapy para evitar duplicados e mensaxes excesivos.
-   - Modificar isto pode provocar que o scraping falle ou se bloquee.
+   - Configure the Twisted reactor for asynchronous handling.
+   - Adjust Scrapy's logging to avoid duplicates and excessive messages.
+   - Modifying this can cause the scraping to fail or hang.
 
-2. **Cabeceiras HTTP por defecto e User-Agent**
+2. **Default HTTP headers and User-Agent**
    ```python
    DEFAULT_HEADERS, USER_AGENT
    ```
-   - Garantizan compatibilidade cos servidores web ao simular un navegador real.
-   - Mantén un comportamento uniforme entre todas as fontes.
-   - Cambialas podería provocar bloqueos ou respostas incorrectas dos sitios.
+   - They ensure compatibility with web servers by simulating a real browser.
+   - They maintain consistent behavior across all sources.
+   - Changing them could cause sites to freeze or respond incorrectly.
 
-3. **Configuracións de cada fonte non relacionadas con `limit_date` ou exclusións**
-   - URLs base, endpoints de busca, tipos de sesión e prefixos internos.
-   - Son necesarias para que o scraper identifique correctamente os contidos.
-   - Modificalas pode romper a extracción de datos.
+3. **Source-specific settings not related to `limit_date` or exclusions**
+   - Base URLs, search endpoints, session types, and internal prefixes.
+   - These are necessary for the scraper to correctly identify content.
+   - Modifying them can break data extraction.
 
-4. **Opcións de `yt-dlp` para extracción e conversión de audio**
+4. **`yt-dlp` options for audio extraction and conversion**
    ```python
    YTDLP_OPTIONS
    ```
-   - Define o formato de audio, calidade e conversións automáticas a `.wav`.
-   - Garantiza que todos os audios descargados teñan a mesma calidade e formato.
-   - Cambios indebidos poden xerar ficheiros incompatibles ou erros durante a descarga.
+   - Defines the audio format, quality, and automatic conversions to `.wav`.
+   - Ensures that all downloaded audio has the same quality and format.
+   - Incorrect changes may result in incompatible files or errors during download.
 
-5. **Funcións de logging**
+5. **Logging funtions**
    ```python
    setup_logging, setup_root_logging
    ```
-   - Xestionan os logs en consola e en ficheiro, rexistrando erros e eventos do scraper.
-   - Permiten depurar problemas sen interromper a execución.
-   - Alteralas podería resultar en perda de información de erros ou duplicación de mensaxes.
+   - Manage logs in the console and in a file, recording scraper errors and events.  
+   - Allow debugging issues without interrupting execution.  
+   - Altering them could result in loss of error information or duplicate messages.
 
-> **Recomendación:** Non tocar ningunha outra sección que non estea marcada como configurable.
-> Cambiar estes bloques pode causar **fallos no scraper, perda de datos ou bloqueos de IP**, afectando á estabilidade do proxecto.
+> **Recommendation:** Do not touch any other section that is not marked as configurable.
+> Changing these blocks can cause **scraper crashes, data loss, or IP blocks**, affecting the project's stability.
