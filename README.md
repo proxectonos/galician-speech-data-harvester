@@ -1,4 +1,4 @@
-# ALIA Scripts
+# ALIA Galician Speech Data Harvester
 
 A tool for downloading and organising audio and text data in Galician from various public sources.
 
@@ -187,3 +187,10 @@ pre-commit run --all-files
 2. Inherit from `BaseDownloader`
 3. Implement methods
 4. Register in `scraper`
+
+
+## Aknowledgements
+
+This work is funded by the Ministerio para la Transformación Digital y de la Función Pública - Funded by EU – NextGenerationEU within the framework of the project Desarrollo de Modelos ALIA. (Esta publicación del proyecto Desarrollo de Modelos ALIA está financiada por el Ministerio para la Transformación Digital y de la Función Pública y por el Plan de Recuperación, Transformación y Resiliencia – Financiado por la Unión Europea – NextGenerationEU).
+
+We would like to thank Merlin Software for the technical development of this tool.
