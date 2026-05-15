@@ -1,4 +1,4 @@
-# Scripts ALIA
+# Scripts ALIA para descarga de datos de voz en galego
 
 Ferramenta para descargar e organizar datos de audio e texto en lingua galega de diversas fontes públicas.
 
@@ -187,3 +187,9 @@ pre-commit run --all-files
 2. Herdar de `BaseDownloader`
 3. Implementar métodos
 4. Rexistrar en `scraper`
+
+# Agradecementos
+
+Esta publicación no marco do proxecto *Desarrollo de Modelos ALIA* está financiada polo Ministerio para a Transformación Dixital e da Función Pública e polo Plan de Recuperación, Transformación e Resiliencia — financiado pola Unión Europea – NextGenerationEU.
+
+Queremos agradecer a Merlin Software polo desenvolvemento técnico desta ferramenta.
