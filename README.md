@@ -39,7 +39,7 @@ Facilitating the collection of Galician data for the development of speech techn
 ```bash
 # Clone repo
 git clone <repo-url>
-cd scripts_descarga
+cd galician-speech-data-harvester
 
 # Create and activate virtual environment
 python3 -m venv venv
